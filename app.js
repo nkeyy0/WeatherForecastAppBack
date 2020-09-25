@@ -35,11 +35,12 @@ const getUserInfo = async (id) => {
   const userInfo = await new Promise((resolve, reject) => {
     userRef.on("value", (data) => {
       resolve(data.val());
-    })
-  });console.log(userInfo)
+    });
+  });
+  console.log(userInfo);
   try {
     const userData = userInfo;
-    console.log(userData)
+    console.log(userData);
     return userData;
   } catch (err) {
     return err;
@@ -55,9 +56,6 @@ app.get("/", async (req, res) => {
   res.send(userInfo);
 });
 
-
-
-
 app.listen(PORT, () => {
-   console.log(`Server has been started at http://localhost:${PORT}`);
+  console.log(`Server has been started at http://localhost:${PORT}`);
 });
