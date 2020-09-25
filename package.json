@@ -1,0 +1,30 @@
+{
+  "name": "weatherforecastappback",
+  "version": "1.0.0",
+  "description": "wether forecast app back end",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "server": "nodemon app.js"
+  },
+  "keywords": [
+    "weather",
+    "forecast",
+    "bck"
+  ],
+  "author": "Kamkou Mikita <mikita.kamkou@innowise-group.com>",
+  "license": "ISC",
+  "dependencies": {
+    "config": "^3.3.1",
+    "dotenv": "^8.2.0",
+    "ejs": "^3.1.5",
+    "express": "^4.17.1",
+    "firebase": "^7.21.0",
+    "firebase-admin": "^9.2.0",
+    "firebase-tools": "^8.11.0"
+  },
+  "devDependencies": {
+    "concurrently": "^5.3.0",
+    "nodemon": "^2.0.4"
+  }
+}
