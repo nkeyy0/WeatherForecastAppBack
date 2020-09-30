@@ -1,7 +1,23 @@
 const express = require("express");
 const admin = require("firebase-admin");
 const firebase = require("firebase");
+const session = require("express-session");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const bodyParser = require("body-parser");
+require("dotenv").config();
 
+const app = express();
+app.use(
+  session({
+    secret: "some secret key",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+
+const registerParser = bodyParser.urlencoded({extended: false});
 const serviceAccount = require("./ServiceAccountKey/serviceAccountKey.json");
 
 admin.initializeApp({
@@ -20,21 +36,66 @@ firebase.initializeApp(config);
 // Get a reference to the database service
 const database = firebase.database();
 
-const writeUserData = (userId, name, surname, patronymic, city, avatar) => {
-  firebase.database.ref();
-};
-
-const PORT = 5002;
-
-const app = express();
+const PORT = 5000;
 
 app.use(express.static("static"));
+
+app.get("/", async (req, res) => {
+  const userId = req.query.userId;
+  const userInfo = await getUserInfo(userId);
+
+  if (!userInfo) {
+    res.send("asf");
+  }
+  res.status(200);
+  res.send(userInfo);
+});
+
+app.post("/register", registerParser, (req, res) => {
+  // const userId = req.query.userId;
+  // const name = req.query.name;
+  // const surname = req.query.surname;
+  // const patronymic = req.query.patronymic;
+  // const email = req.query.email;
+  // const city = req.query.city;
+  // const password = req.query.password;
+  // const hashPassword = await bcrypt.hash(password, 10);
+  // firebase.database().ref("users/" + userId).set({
+  // name,
+  // surname,
+  // patronymic,
+  // email,
+  // city,
+  // password: hashPassword
+  // });
+  res.send(req.body);
+  console.log(res.body);
+});
+
+const writeUserData = (
+  userId,
+  name,
+  surname,
+  patronymic,
+  city,
+  avatar,
+  password
+) => {
+  firebase.database().ref("/users").set({
+    users: userId,
+  });
+};
 
 const getUserInfo = async (id) => {
   const userRef = firebase.database().ref("users/" + id);
   const userInfo = await new Promise((resolve, reject) => {
     userRef.on("value", (data) => {
-      resolve(data.val());
+      resolve({
+        name: data.val().Name,
+        surname: data.val().Surname,
+        patronymic: data.val().Patronymic,
+        avatar: data.val().avatar,
+      });
     });
   });
   console.log(userInfo);
@@ -47,14 +108,40 @@ const getUserInfo = async (id) => {
   }
 };
 
-app.get("/", async (req, res) => {
-  const userId = req.query.userId;
-  const userInfo = await getUserInfo(userId);
-  if (!userInfo) {
-    res.send("asf");
-  }
-  res.send(userInfo);
-});
+// const login = async (req, res) => {
+//   const user = await getUserInfo(id)
+//   const candidate = await User.findOne({email:req.body.email})
+
+//   if(candidate){
+//     //Проверка пароля, пользователь существует
+//     const passwordResult =await bcrypt.compare(req.body.password, candidate.password)
+//     if(passwordResult){
+//       //Генерация токена, пароли совпали
+//       const token = jwt.sign({
+//         name: user.name,
+//         surname: user.surname,
+//         patronymic: user.patronymic,
+//         avatar: user.patronymic
+//       }, process.env.jwt, {expiresIn: 60 * 60});
+
+//       res.status(200).json({
+//         token
+//       })
+//     }
+//     else {
+//       //пароли не совпали
+//       res.status(401).json({
+//         message: 'Passwords do not match'
+//       })
+//     }
+//   }
+//   else {
+//     // Пользователя нет, ошибка
+//     res.status(404).json({
+//       message:'User not found'
+//     });
+//   }
+// }
 
 app.listen(PORT, () => {
   console.log(`Server has been started at http://localhost:${PORT}`);
