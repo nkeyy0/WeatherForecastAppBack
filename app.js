@@ -2,12 +2,14 @@ const express = require("express");
 const admin = require("firebase-admin");
 const firebase = require("firebase");
 const session = require("express-session");
+const cors = require('cors');
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
 require("dotenv").config();
 
 const app = express();
+const registerParser = bodyParser.json({ extended: false });
 app.use(
   session({
     secret: "some secret key",
@@ -15,10 +17,11 @@ app.use(
     saveUninitialized: false,
   })
 );
-
-
-const registerParser = bodyParser.urlencoded({extended: false});
+app.use(express.static("static"));
+app.use(registerParser);
+app.use(cors());
 const serviceAccount = require("./ServiceAccountKey/serviceAccountKey.json");
+
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -38,8 +41,6 @@ const database = firebase.database();
 
 const PORT = 5000;
 
-app.use(express.static("static"));
-
 app.get("/", async (req, res) => {
   const userId = req.query.userId;
   const userInfo = await getUserInfo(userId);
@@ -51,25 +52,35 @@ app.get("/", async (req, res) => {
   res.send(userInfo);
 });
 
-app.post("/register", registerParser, (req, res) => {
-  // const userId = req.query.userId;
-  // const name = req.query.name;
-  // const surname = req.query.surname;
-  // const patronymic = req.query.patronymic;
-  // const email = req.query.email;
-  // const city = req.query.city;
-  // const password = req.query.password;
-  // const hashPassword = await bcrypt.hash(password, 10);
-  // firebase.database().ref("users/" + userId).set({
-  // name,
-  // surname,
-  // patronymic,
-  // email,
-  // city,
-  // password: hashPassword
-  // });
-  res.send(req.body);
-  console.log(res.body);
+app.post("/register", registerParser, async (req, res) => {
+  const userId = req.body.id;
+  const name = req.body.name;
+  const surname = req.body.surname;
+  const patronymic = req.body.patronymic;
+  const email = req.body.email;
+  const city = req.body.city;
+  const password = req.body.password;
+  const hashPassword = await bcrypt.hash(password, 10);
+  firebase.database().ref("users/" + userId).set({
+  name,
+  surname,
+  patronymic,
+  email,
+  city,
+  password: hashPassword
+  });
+  res.header('Content-type', 'application/json')
+  if(!req.body) {
+    return res.sendStatus(400);
+  }
+  console.log(req.body);
+  // res.send(JSON.stringify(req.body));
+});
+
+app.get("/register", (req, res) => {
+  if (req.url) {
+    res.send(req.url);
+  }
 });
 
 const writeUserData = (
