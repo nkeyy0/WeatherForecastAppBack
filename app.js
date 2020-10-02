@@ -2,7 +2,7 @@ const express = require("express");
 const admin = require("firebase-admin");
 const firebase = require("firebase");
 const session = require("express-session");
-const cors = require('cors');
+const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
@@ -21,7 +21,7 @@ app.use(express.static("static"));
 app.use(registerParser);
 app.use(cors());
 const serviceAccount = require("./ServiceAccountKey/serviceAccountKey.json");
-
+const e = require("express");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -53,6 +53,7 @@ app.get("/", async (req, res) => {
 });
 
 app.post("/register", registerParser, async (req, res) => {
+  res.header('Content-type', 'application/json')
   const userId = req.body.id;
   const name = req.body.name;
   const surname = req.body.surname;
@@ -61,27 +62,25 @@ app.post("/register", registerParser, async (req, res) => {
   const city = req.body.city;
   const password = req.body.password;
   const hashPassword = await bcrypt.hash(password, 10);
-  firebase.database().ref("users/" + userId).set({
-  name,
-  surname,
-  patronymic,
-  email,
-  city,
-  password: hashPassword
-  });
-  res.header('Content-type', 'application/json')
-  if(!req.body) {
-    return res.sendStatus(400);
+  const check = await checkUserEmail(email);
+  if (check) {
+    res.sendStatus(400);
+  } else {
+    res.sendStatus(200);
+    firebase
+      .database()
+      .ref("users/" + userId)
+      .set({
+        name,
+        surname,
+        patronymic,
+        email,
+        city,
+        password: hashPassword,
+      });
   }
-  console.log(req.body);
-  // res.send(JSON.stringify(req.body));
 });
 
-app.get("/register", (req, res) => {
-  if (req.url) {
-    res.send(req.url);
-  }
-});
 
 const writeUserData = (
   userId,
@@ -116,6 +115,26 @@ const getUserInfo = async (id) => {
     return userData;
   } catch (err) {
     return err;
+  }
+};
+
+const checkUserEmail = async (email) => {
+  const ref = firebase.database().ref("users");
+
+  const userID = await new Promise((resolve, reject) => {
+    ref
+      .orderByChild("email")
+      .equalTo(email)
+      .on("value", (data) => {
+        console.log(data.val());
+        resolve(data.val());
+      });
+  });
+  console.log(userID);
+  if (userID) {
+    return true;
+  } else {
+    return false;
   }
 };
 
