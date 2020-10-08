@@ -1,15 +1,19 @@
-const express = require("express");
 const admin = require("firebase-admin");
-const firebase = require("firebase");
-const session = require("express-session");
-const cors = require("cors");
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
+const cors = require("cors");
+const express = require("express");
+const firebase = require("firebase");
+const jwt = require("jsonwebtoken");
+const passport = require("passport");
+const session = require("express-session");
+const uuid = require("uuid");
+const { v4: uuidv4 } = require("uuid");
+// const jwtMiddleware = require('express-jwt');
 require("dotenv").config();
 
 const app = express();
-const registerParser = bodyParser.json({ extended: false });
+const jsonParser = bodyParser.json({ extended: false });
 app.use(
   session({
     secret: "some secret key",
@@ -17,11 +21,20 @@ app.use(
     saveUninitialized: false,
   })
 );
+app.use((req, res, next) => {
+  res.append("Access-Control-Allow-Origin", ["*"]);
+  res.append("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+  res.append("Access-Control-Allow-Headers", ["Content-Type", "Authorization"]);
+  next();
+});
 app.use(express.static("static"));
-app.use(registerParser);
+app.use(jsonParser);
 app.use(cors());
+app.use(passport.initialize());
+// require('./middleware/passport.js')(passport);
 const serviceAccount = require("./ServiceAccountKey/serviceAccountKey.json");
 const e = require("express");
+const { resolveInclude } = require("ejs");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -52,15 +65,65 @@ app.get("/", async (req, res) => {
   res.send(userInfo);
 });
 
-app.post("/register", registerParser, async (req, res) => {
-  res.header('Content-type', 'application/json')
-  const userId = req.body.id;
-  const name = req.body.name;
-  const surname = req.body.surname;
-  const patronymic = req.body.patronymic;
-  const email = req.body.email;
-  const city = req.body.city;
-  const password = req.body.password;
+app.post("/login", jsonParser, async (req, res) => {
+  const { email, password } = req.body;
+
+  const candidate = await getUserFromDB(email);
+  if (!candidate) {
+    console.log(candidate, "123");
+    res.status(404).json({
+      message: "User with this email was not found",
+    });
+  }
+  const candidateInfo = Object.values(candidate)[0];
+  const candidatePassword = candidateInfo.password;
+
+  const passwordResult = await bcrypt.compare(password, candidatePassword);
+  if (!passwordResult) {
+    res.status(401).json({
+      message: "Incorrect password. Try it again",
+    });
+  }
+  const userName = candidateInfo.name;
+  const userSurname = candidateInfo.surname;
+  const userPatronymic = candidateInfo.patronymic;
+  const userCity = candidateInfo.city;
+  const refreshToken = uuidv4();
+  const token = jwt.sign(
+    {
+      name: userName,
+      surname: userSurname,
+      patronymic: userPatronymic,
+      city: userCity,
+    },
+    process.env.jwtSecretKey,
+    { expiresIn: 60 * 60 }
+  );
+  
+  res.status(200).json({
+    token: `Bearer ${token}`
+  });
+});
+
+// app.get("/login", async (req, res) => {
+//   const { email, password } = req.body;
+
+//   const candidate = await getUserFromDB();
+
+//   if (candidate) {
+//     const candidatePassword = Object.values(candidate)[0].password;
+//     const passwordResult = await bcrypt.compare(
+//       "228itasull",
+//       candidatePassword
+//     );
+//   }
+
+//   res.send(candidate);
+// });
+
+app.post("/register", jsonParser, async (req, res) => {
+  res.header("Content-type", "application/json");
+  const { userId, name, surname, patronymic, email, city, password } = req.body;
   const hashPassword = await bcrypt.hash(password, 10);
   const check = await checkUserEmail(email);
   if (check) {
@@ -80,21 +143,6 @@ app.post("/register", registerParser, async (req, res) => {
       });
   }
 });
-
-
-const writeUserData = (
-  userId,
-  name,
-  surname,
-  patronymic,
-  city,
-  avatar,
-  password
-) => {
-  firebase.database().ref("/users").set({
-    users: userId,
-  });
-};
 
 const getUserInfo = async (id) => {
   const userRef = firebase.database().ref("users/" + id);
@@ -136,6 +184,22 @@ const checkUserEmail = async (email) => {
   } else {
     return false;
   }
+};
+
+const getUserFromDB = async (email) => {
+  const ref = firebase.database().ref("users");
+  const candidate = await new Promise((resolve, reject) => {
+    ref
+      .orderByChild("email")
+      .equalTo(email)
+      .on("value", (data) => {
+        console.log(data.val());
+        resolve(data.val());
+      });
+  });
+  console.log(candidate);
+
+  return candidate;
 };
 
 // const login = async (req, res) => {
