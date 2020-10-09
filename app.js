@@ -9,6 +9,7 @@ const passport = require("passport");
 const session = require("express-session");
 const uuid = require("uuid");
 const { v4: uuidv4 } = require("uuid");
+const fetch = require('node-fetch');
 // const jwtMiddleware = require('express-jwt');
 require("dotenv").config();
 
@@ -88,6 +89,7 @@ app.post("/login", jsonParser, async (req, res) => {
   const userSurname = candidateInfo.surname;
   const userPatronymic = candidateInfo.patronymic;
   const userCity = candidateInfo.city;
+  const userEmail = candidateInfo.email
   const refreshToken = uuidv4();
   const token = jwt.sign(
     {
@@ -95,35 +97,62 @@ app.post("/login", jsonParser, async (req, res) => {
       surname: userSurname,
       patronymic: userPatronymic,
       city: userCity,
+      email: userEmail
     },
     process.env.jwtSecretKey,
-    { expiresIn: 60 * 60 }
+    { expiresIn: 30 }
   );
-  
+
   res.status(200).json({
-    token: `Bearer ${token}`
+    token: `Bearer ${token}`,
   });
 });
 
-// app.get("/login", async (req, res) => {
-//   const { email, password } = req.body;
 
-//   const candidate = await getUserFromDB();
+app.post("/getWeatherInfoFromOpenWeatherMap", jsonParser, async (req, res) => {
+  console.log(req.body)
+  const { email, city } = req.body;
+  console.log(email, city);
+  const ref = firebase.database().ref("users");
 
-//   if (candidate) {
-//     const candidatePassword = Object.values(candidate)[0].password;
-//     const passwordResult = await bcrypt.compare(
-//       "228itasull",
-//       candidatePassword
-//     );
-//   }
+  const userID = await new Promise((resolve, reject) => {
+    ref
+      .orderByChild("email")
+      .equalTo(email)
+      .on("value", (data) => {
+        console.log(data.val());
+        resolve(data.val());
+      });
+  });
+  console.log(userID);
+  const id = Object.keys(userID)[0];
 
-//   res.send(candidate);
-// });
+  await firebase.database().ref("users/" + id).update({
+    city: city
+  })
+
+  const lastCitySearch = await new Promise((resolve, reject) => {
+    firebase.database().ref("users/" + id).on("value", (data) => {
+      resolve({
+        city: data.val().city
+      });
+    });
+  });
+  console.log(lastCitySearch.city);
+  console.log(`http://api.openweathermap.org/data/2.5/weather?q=${lastCitySearch.city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`);
+  const data =  await fetch(
+    `http://api.openweathermap.org/data/2.5/weather?q=${lastCitySearch.city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`
+  )
+  const dataResponse = await data.json()
+  console.log(dataResponse);
+  res.status(200).json({
+    dataResponse
+  })
+});
 
 app.post("/register", jsonParser, async (req, res) => {
   res.header("Content-type", "application/json");
-  const { userId, name, surname, patronymic, email, city, password } = req.body;
+  const { id, name, surname, patronymic, email, city, password } = req.body;
   const hashPassword = await bcrypt.hash(password, 10);
   const check = await checkUserEmail(email);
   if (check) {
@@ -132,7 +161,7 @@ app.post("/register", jsonParser, async (req, res) => {
     res.sendStatus(200);
     firebase
       .database()
-      .ref("users/" + userId)
+      .ref("users/" + id)
       .set({
         name,
         surname,
@@ -202,40 +231,6 @@ const getUserFromDB = async (email) => {
   return candidate;
 };
 
-// const login = async (req, res) => {
-//   const user = await getUserInfo(id)
-//   const candidate = await User.findOne({email:req.body.email})
-
-//   if(candidate){
-//     //Проверка пароля, пользователь существует
-//     const passwordResult =await bcrypt.compare(req.body.password, candidate.password)
-//     if(passwordResult){
-//       //Генерация токена, пароли совпали
-//       const token = jwt.sign({
-//         name: user.name,
-//         surname: user.surname,
-//         patronymic: user.patronymic,
-//         avatar: user.patronymic
-//       }, process.env.jwt, {expiresIn: 60 * 60});
-
-//       res.status(200).json({
-//         token
-//       })
-//     }
-//     else {
-//       //пароли не совпали
-//       res.status(401).json({
-//         message: 'Passwords do not match'
-//       })
-//     }
-//   }
-//   else {
-//     // Пользователя нет, ошибка
-//     res.status(404).json({
-//       message:'User not found'
-//     });
-//   }
-// }
 
 app.listen(PORT, () => {
   console.log(`Server has been started at http://localhost:${PORT}`);
