@@ -9,7 +9,7 @@ const passport = require("passport");
 const session = require("express-session");
 const uuid = require("uuid");
 const { v4: uuidv4 } = require("uuid");
-const fetch = require('node-fetch');
+const fetch = require("node-fetch");
 // const jwtMiddleware = require('express-jwt');
 require("dotenv").config();
 
@@ -36,6 +36,7 @@ app.use(passport.initialize());
 const serviceAccount = require("./ServiceAccountKey/serviceAccountKey.json");
 const e = require("express");
 const { resolveInclude } = require("ejs");
+const { AUTH_USER_NOT_FOUNT, AUTH_WRONG_PASSWORD } = require("./constants/constants")
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -66,55 +67,84 @@ app.get("/", async (req, res) => {
   res.send(userInfo);
 });
 
+// app.post("/login", jsonParser, async (req, res) => {
+//   const { email, password } = req.body;
+
+//   const candidate = await getUserFromDB(email);
+//   if (!candidate) {
+//     console.log(candidate, "123");
+//     res.status(404).json({
+//       message: "User with this email was not found",
+//     });
+//   }
+//   const candidateInfo = Object.values(candidate)[0];
+//   const candidatePassword = candidateInfo.password;
+
+//   const passwordResult = await bcrypt.compare(password, candidatePassword);
+//   if (!passwordResult) {
+//     res.status(401).json({
+//       message: "Incorrect password. Try it again",
+//     });
+//   }
+//   const userName = candidateInfo.name;
+//   const userSurname = candidateInfo.surname;
+//   const userPatronymic = candidateInfo.patronymic;
+//   const userCity = candidateInfo.city;
+//   const userEmail = candidateInfo.email;
+//   const refreshToken = uuidv4();
+//   const token = jwt.sign(
+//     {
+//       name: userName,
+//       surname: userSurname,
+//       patronymic: userPatronymic,
+//       city: userCity,
+//       email: userEmail,
+//     },
+//     process.env.jwtSecretKey,
+//     { expiresIn: 30 }
+//   );
+
+//   res.status(200).json({
+//     token: `Bearer ${token}`,
+//   });
+// });
+
 app.post("/login", jsonParser, async (req, res) => {
   const { email, password } = req.body;
-
-  const candidate = await getUserFromDB(email);
-  if (!candidate) {
-    console.log(candidate, "123");
+  const error = firebase
+    .auth()
+    .signInWithEmailAndPassword(email, password)
+    .then((user) => {
+      console.log(user.uid);
+    })
+    .catch((error) => {
+      // Handle Errors here.
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      console.log(error.code);
+      return error.code;
+    });
+  if (error === AUTH_USER_NOT_FOUNT) {
     res.status(404).json({
       message: "User with this email was not found",
     });
   }
-  const candidateInfo = Object.values(candidate)[0];
-  const candidatePassword = candidateInfo.password;
-
-  const passwordResult = await bcrypt.compare(password, candidatePassword);
-  if (!passwordResult) {
+  if (error === AUTH_WRONG_PASSWORD) {
     res.status(401).json({
       message: "Incorrect password. Try it again",
     });
   }
-  const userName = candidateInfo.name;
-  const userSurname = candidateInfo.surname;
-  const userPatronymic = candidateInfo.patronymic;
-  const userCity = candidateInfo.city;
-  const userEmail = candidateInfo.email
-  const refreshToken = uuidv4();
-  const token = jwt.sign(
-    {
-      name: userName,
-      surname: userSurname,
-      patronymic: userPatronymic,
-      city: userCity,
-      email: userEmail
-    },
-    process.env.jwtSecretKey,
-    { expiresIn: 30 }
-  );
 
-  res.status(200).json({
-    token: `Bearer ${token}`,
-  });
+  res.sendStatus(200).json({
+    message: "OK"
+  })
 });
 
-
 app.post("/getWeatherInfoFromOpenWeatherMap", jsonParser, async (req, res) => {
-  console.log(req.body)
+  console.log(req.body);
   const { email, city } = req.body;
   console.log(email, city);
   const ref = firebase.database().ref("users");
-
   const userID = await new Promise((resolve, reject) => {
     ref
       .orderByChild("email")
@@ -127,49 +157,112 @@ app.post("/getWeatherInfoFromOpenWeatherMap", jsonParser, async (req, res) => {
   console.log(userID);
   const id = Object.keys(userID)[0];
 
-  await firebase.database().ref("users/" + id).update({
-    city: city
-  })
+  let lastCitySearch = null;
 
-  const lastCitySearch = await new Promise((resolve, reject) => {
-    firebase.database().ref("users/" + id).on("value", (data) => {
-      resolve({
-        city: data.val().city
-      });
+  if (city === null) {
+    lastCitySearch = await new Promise((resolve, reject) => {
+      firebase
+        .database()
+        .ref("users/" + id)
+        .on("value", (data) => {
+          resolve({
+            city: data.val().city,
+          });
+        });
     });
-  });
-  console.log(lastCitySearch.city);
-  console.log(`http://api.openweathermap.org/data/2.5/weather?q=${lastCitySearch.city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`);
-  const data =  await fetch(
+  } else {
+    await firebase
+      .database()
+      .ref("users/" + id)
+      .update({
+        city: city,
+      });
+    lastCitySearch = await new Promise((resolve, reject) => {
+      firebase
+        .database()
+        .ref("users/" + id)
+        .on("value", (data) => {
+          resolve({
+            city: data.val().city,
+          });
+        });
+    });
+  }
+  const data = await fetch(
     `http://api.openweathermap.org/data/2.5/weather?q=${lastCitySearch.city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`
-  )
-  const dataResponse = await data.json()
+  );
+  const dataResponse = await data.json();
   console.log(dataResponse);
   res.status(200).json({
-    dataResponse
-  })
+    dataResponse,
+  });
 });
 
-app.post("/register", jsonParser, async (req, res) => {
-  res.header("Content-type", "application/json");
-  const { id, name, surname, patronymic, email, city, password } = req.body;
-  const hashPassword = await bcrypt.hash(password, 10);
-  const check = await checkUserEmail(email);
-  if (check) {
-    res.sendStatus(400);
-  } else {
-    res.sendStatus(200);
+// app.post("/register", jsonParser, async (req, res) => {
+//   res.header("Content-type", "application/json");
+//   const { id, name, surname, patronymic, email, city, password } = req.body;
+//   const hashPassword = await bcrypt.hash(password, 10);
+//   const check = await checkUserEmail(email);
+//   if (check) {
+//     res.sendStatus(400);
+//   } else {
+//     res.sendStatus(200);
+//     firebase
+//       .database()
+//       .ref("users/" + id)
+//       .set({
+//         name,
+//         surname,
+//         patronymic,
+//         email,
+//         city,
+//         password: hashPassword,
+//       });
+//   }
+// });
+
+app.post("/createUser", jsonParser, async (req, res) => {
+  const { name, surname, patronymic, city, email, password } = req.body;
+  console.log(name, surname, patronymic, city, email, password);
+  // const hashPassword = await bcrypt.hash(password, 10);
+  // const check = await checkUserEmail(email);
+  // if(check){
+  //   res.sendStatus(400);
+  // }
+  // else {
+
+  const id = await admin
+    .auth()
+    .createUser({
+      email: email,
+      emailVerified: false,
+      password: password,
+      displayName: `${name} ${surname} ${patronymic}`,
+      disabled: false,
+    })
+    .then((userRecord) => {
+      console.log("Successfully created new user:", userRecord.email);
+      return userRecord.uid;
+    })
+    .catch((error) => {
+      console.log("Error creating new user:", error);
+      return null;
+    });
+  console.log(id);
+  if (id) {
     firebase
       .database()
       .ref("users/" + id)
       .set({
-        name,
-        surname,
-        patronymic,
-        email,
         city,
-        password: hashPassword,
       });
+    res.sendStatus(200).json({
+      message: "OK",
+    });
+  } else {
+    res.sendStatus(409).json({
+      message: "error",
+    });
   }
 });
 
@@ -230,7 +323,6 @@ const getUserFromDB = async (email) => {
 
   return candidate;
 };
-
 
 app.listen(PORT, () => {
   console.log(`Server has been started at http://localhost:${PORT}`);
