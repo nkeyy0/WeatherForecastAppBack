@@ -12,6 +12,7 @@ const { v4: uuidv4 } = require("uuid");
 const fetch = require("node-fetch");
 // const jwtMiddleware = require('express-jwt');
 require("dotenv").config();
+const authMiddleware = require('./middleware/auth');
 
 const app = express();
 const jsonParser = bodyParser.json({ extended: false });
@@ -36,7 +37,11 @@ app.use(passport.initialize());
 const serviceAccount = require("./ServiceAccountKey/serviceAccountKey.json");
 const e = require("express");
 const { resolveInclude } = require("ejs");
-const { AUTH_USER_NOT_FOUNT, AUTH_WRONG_PASSWORD } = require("./constants/constants")
+const { auth } = require("firebase-admin");
+const AUTH_USER_NOT_FOUNT = require("./constants/constants")
+  .AUTH_USER_NOT_FOUND;
+const AUTH_WRONG_PASSWORD = require("./constants/constants")
+  .AUTH_WRONG_PASSWORD;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -111,16 +116,10 @@ app.get("/", async (req, res) => {
 
 app.post("/login", jsonParser, async (req, res) => {
   const { email, password } = req.body;
-  const error = firebase
+  const error = await firebase
     .auth()
     .signInWithEmailAndPassword(email, password)
-    .then((user) => {
-      console.log(user.uid);
-    })
     .catch((error) => {
-      // Handle Errors here.
-      const errorCode = error.code;
-      const errorMessage = error.message;
       console.log(error.code);
       return error.code;
     });
@@ -134,102 +133,134 @@ app.post("/login", jsonParser, async (req, res) => {
       message: "Incorrect password. Try it again",
     });
   }
-
-  res.sendStatus(200).json({
-    message: "OK"
-  })
+  const userUID = await admin
+    .auth()
+    .getUserByEmail(email)
+    .then(function (userRecord) {
+      return userRecord.uid;
+    });
+  console.log(userUID);
+  const ref = database.ref("users/" + userUID);
+  const userCitySearch = await new Promise((resolve, reject) => {
+    ref.on(
+      "value",
+      (snapshot) => {
+        console.log(snapshot.val());
+        resolve(snapshot.val().city);
+      },
+      (err) => {
+        reject(err.code);
+      }
+    );
+  });
+  console.log(userCitySearch);
+  const userResult = await admin
+    .auth()
+    .getUserByEmail(email)
+    .then(function (userRecord) {
+      return { name: userRecord.displayName, email: userRecord.email };
+    })
+    .catch(function (error) {
+      console.log("Error fetching user data:", error);
+      return error;
+    });
+  console.log(userCitySearch);
+  const token = jwt.sign(
+    {
+      userName: userResult.name,
+      userCity: userCitySearch,
+      userEmail: userResult.email,
+    },
+    process.env.jwtSecretKey,
+    { expiresIn: 60 * 60 }
+  );
+  res.setHeader("Authorization", `Bearer ${token}`);
+  res.status(200).json({
+    message: "OK",
+  });
+  // res.status(200).json({
+  //   message: "OK",
+  // });
 });
 
-app.post("/getWeatherInfoFromOpenWeatherMap", jsonParser, async (req, res) => {
-  console.log(req.body);
-  const { email, city } = req.body;
-  console.log(email, city);
-  const ref = firebase.database().ref("users");
-  const userID = await new Promise((resolve, reject) => {
-    ref
-      .orderByChild("email")
-      .equalTo(email)
-      .on("value", (data) => {
-        console.log(data.val());
-        resolve(data.val());
-      });
-  });
-  console.log(userID);
-  const id = Object.keys(userID)[0];
+app.post("/logout", jsonParser, async (req, res) => {
+  firebase
+    .auth()
+    .signOut()
+    .then(function () {
+      console.log("success");
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+});
 
-  let lastCitySearch = null;
-
-  if (city === null) {
-    lastCitySearch = await new Promise((resolve, reject) => {
-      firebase
-        .database()
-        .ref("users/" + id)
+app.post(
+  "/getWeatherInfoFromOpenWeatherMap",
+  authMiddleware,
+  jsonParser,
+  async (req, res) => {
+    console.log(req.body);
+    const { email, city } = req.body;
+    console.log(email, city);
+    const ref = firebase.database().ref("users");
+    const userID = await new Promise((resolve, reject) => {
+      ref
+        .orderByChild("email")
+        .equalTo(email)
         .on("value", (data) => {
-          resolve({
-            city: data.val().city,
-          });
+          console.log(data.val());
+          resolve(data.val());
         });
     });
-  } else {
-    await firebase
-      .database()
-      .ref("users/" + id)
-      .update({
-        city: city,
+    console.log(userID);
+    const id = Object.keys(userID)[0];
+
+    let lastCitySearch = null;
+
+    if (city === null) {
+      lastCitySearch = await new Promise((resolve, reject) => {
+        firebase
+          .database()
+          .ref("users/" + id)
+          .on("value", (data) => {
+            resolve({
+              city: data.val().city,
+            });
+          });
       });
-    lastCitySearch = await new Promise((resolve, reject) => {
-      firebase
+    } else {
+      await firebase
         .database()
         .ref("users/" + id)
-        .on("value", (data) => {
-          resolve({
-            city: data.val().city,
-          });
+        .update({
+          city: city,
         });
+      lastCitySearch = await new Promise((resolve, reject) => {
+        firebase
+          .database()
+          .ref("users/" + id)
+          .on("value", (data) => {
+            resolve({
+              city: data.val().city,
+            });
+          });
+      });
+    }
+    const data = await fetch(
+      `http://api.openweathermap.org/data/2.5/weather?q=${lastCitySearch.city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`
+    );
+    const dataResponse = await data.json();
+    console.log(dataResponse);
+    res.status(200).json({
+      dataResponse,
     });
   }
-  const data = await fetch(
-    `http://api.openweathermap.org/data/2.5/weather?q=${lastCitySearch.city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`
-  );
-  const dataResponse = await data.json();
-  console.log(dataResponse);
-  res.status(200).json({
-    dataResponse,
-  });
-});
-
-// app.post("/register", jsonParser, async (req, res) => {
-//   res.header("Content-type", "application/json");
-//   const { id, name, surname, patronymic, email, city, password } = req.body;
-//   const hashPassword = await bcrypt.hash(password, 10);
-//   const check = await checkUserEmail(email);
-//   if (check) {
-//     res.sendStatus(400);
-//   } else {
-//     res.sendStatus(200);
-//     firebase
-//       .database()
-//       .ref("users/" + id)
-//       .set({
-//         name,
-//         surname,
-//         patronymic,
-//         email,
-//         city,
-//         password: hashPassword,
-//       });
-//   }
-// });
+);
 
 app.post("/createUser", jsonParser, async (req, res) => {
   const { name, surname, patronymic, city, email, password } = req.body;
   console.log(name, surname, patronymic, city, email, password);
-  // const hashPassword = await bcrypt.hash(password, 10);
-  // const check = await checkUserEmail(email);
-  // if(check){
-  //   res.sendStatus(400);
-  // }
-  // else {
 
   const id = await admin
     .auth()
@@ -265,64 +296,6 @@ app.post("/createUser", jsonParser, async (req, res) => {
     });
   }
 });
-
-const getUserInfo = async (id) => {
-  const userRef = firebase.database().ref("users/" + id);
-  const userInfo = await new Promise((resolve, reject) => {
-    userRef.on("value", (data) => {
-      resolve({
-        name: data.val().Name,
-        surname: data.val().Surname,
-        patronymic: data.val().Patronymic,
-        avatar: data.val().avatar,
-      });
-    });
-  });
-  console.log(userInfo);
-  try {
-    const userData = userInfo;
-    console.log(userData);
-    return userData;
-  } catch (err) {
-    return err;
-  }
-};
-
-const checkUserEmail = async (email) => {
-  const ref = firebase.database().ref("users");
-
-  const userID = await new Promise((resolve, reject) => {
-    ref
-      .orderByChild("email")
-      .equalTo(email)
-      .on("value", (data) => {
-        console.log(data.val());
-        resolve(data.val());
-      });
-  });
-  console.log(userID);
-  if (userID) {
-    return true;
-  } else {
-    return false;
-  }
-};
-
-const getUserFromDB = async (email) => {
-  const ref = firebase.database().ref("users");
-  const candidate = await new Promise((resolve, reject) => {
-    ref
-      .orderByChild("email")
-      .equalTo(email)
-      .on("value", (data) => {
-        console.log(data.val());
-        resolve(data.val());
-      });
-  });
-  console.log(candidate);
-
-  return candidate;
-};
 
 app.listen(PORT, () => {
   console.log(`Server has been started at http://localhost:${PORT}`);
