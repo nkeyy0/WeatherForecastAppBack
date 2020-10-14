@@ -12,7 +12,7 @@ const { v4: uuidv4 } = require("uuid");
 const fetch = require("node-fetch");
 // const jwtMiddleware = require('express-jwt');
 require("dotenv").config();
-const authMiddleware = require('./middleware/auth');
+const authMiddleware = require("./middleware/auth");
 
 const app = express();
 const jsonParser = bodyParser.json({ extended: false });
@@ -27,6 +27,8 @@ app.use((req, res, next) => {
   res.append("Access-Control-Allow-Origin", ["*"]);
   res.append("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
   res.append("Access-Control-Allow-Headers", ["Content-Type", "Authorization"]);
+  res.append("Access-Control-Expose-Headers", "Authorization") 
+  
   next();
 });
 app.use(express.static("static"));
@@ -42,6 +44,7 @@ const AUTH_USER_NOT_FOUNT = require("./constants/constants")
   .AUTH_USER_NOT_FOUND;
 const AUTH_WRONG_PASSWORD = require("./constants/constants")
   .AUTH_WRONG_PASSWORD;
+const DEFAULT_API = require("./constants/constants").DEFAULT_API;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -71,48 +74,6 @@ app.get("/", async (req, res) => {
   res.status(200);
   res.send(userInfo);
 });
-
-// app.post("/login", jsonParser, async (req, res) => {
-//   const { email, password } = req.body;
-
-//   const candidate = await getUserFromDB(email);
-//   if (!candidate) {
-//     console.log(candidate, "123");
-//     res.status(404).json({
-//       message: "User with this email was not found",
-//     });
-//   }
-//   const candidateInfo = Object.values(candidate)[0];
-//   const candidatePassword = candidateInfo.password;
-
-//   const passwordResult = await bcrypt.compare(password, candidatePassword);
-//   if (!passwordResult) {
-//     res.status(401).json({
-//       message: "Incorrect password. Try it again",
-//     });
-//   }
-//   const userName = candidateInfo.name;
-//   const userSurname = candidateInfo.surname;
-//   const userPatronymic = candidateInfo.patronymic;
-//   const userCity = candidateInfo.city;
-//   const userEmail = candidateInfo.email;
-//   const refreshToken = uuidv4();
-//   const token = jwt.sign(
-//     {
-//       name: userName,
-//       surname: userSurname,
-//       patronymic: userPatronymic,
-//       city: userCity,
-//       email: userEmail,
-//     },
-//     process.env.jwtSecretKey,
-//     { expiresIn: 30 }
-//   );
-
-//   res.status(200).json({
-//     token: `Bearer ${token}`,
-//   });
-// });
 
 app.post("/login", jsonParser, async (req, res) => {
   const { email, password } = req.body;
@@ -196,62 +157,102 @@ app.post("/logout", jsonParser, async (req, res) => {
 });
 
 app.post(
+  "/getWeatherInfoAfterLogin",
+  authMiddleware,
+  jsonParser,
+  async (req, res) => {
+    const { email } = req.body;
+    console.log(email);
+    const userUID = await admin
+      .auth()
+      .getUserByEmail(email)
+      .then(function (userRecord) {
+        return userRecord.uid;
+      });
+    console.log(userUID);
+    const ref = database.ref("users/" + userUID);
+    const userInfo = await new Promise((resolve, reject) => {
+      ref.on(
+        "value",
+        (snapshot) => {
+          console.log(snapshot.val());
+          resolve({ city: snapshot.val().city, api: snapshot.val().api });
+        },
+        (err) => {
+          reject(err.code);
+        }
+      );
+    });
+    let data = {};
+    console.log(userInfo.api);
+    if (userInfo.api === "OpenWeatherMap") {
+      data = await fetch(
+        `http://api.openweathermap.org/data/2.5/weather?q=${userInfo.city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`
+      );
+    }
+    if (userInfo.api === "Weatherstack") {
+      data = await fetch(
+        `http://api.weatherstack.com/current?access_key=${process.env.API_KEY_FROM_WEATHERSTACK}&query=${userInfo.city}&units=m`
+      );
+    }
+    const dataResponse = await data.json();
+    console.log(dataResponse);
+    res.status(200).json({
+      dataResponse,
+    });
+  }
+);
+
+app.post(
   "/getWeatherInfoFromOpenWeatherMap",
   authMiddleware,
   jsonParser,
   async (req, res) => {
-    console.log(req.body);
     const { email, city } = req.body;
-    console.log(email, city);
-    const ref = firebase.database().ref("users");
-    const userID = await new Promise((resolve, reject) => {
-      ref
-        .orderByChild("email")
-        .equalTo(email)
-        .on("value", (data) => {
-          console.log(data.val());
-          resolve(data.val());
-        });
-    });
-    console.log(userID);
-    const id = Object.keys(userID)[0];
-
-    let lastCitySearch = null;
-
-    if (city === null) {
-      lastCitySearch = await new Promise((resolve, reject) => {
-        firebase
-          .database()
-          .ref("users/" + id)
-          .on("value", (data) => {
-            resolve({
-              city: data.val().city,
-            });
-          });
-      });
-    } else {
-      await firebase
-        .database()
-        .ref("users/" + id)
-        .update({
-          city: city,
-        });
-      lastCitySearch = await new Promise((resolve, reject) => {
-        firebase
-          .database()
-          .ref("users/" + id)
-          .on("value", (data) => {
-            resolve({
-              city: data.val().city,
-            });
-          });
-      });
-    }
     const data = await fetch(
-      `http://api.openweathermap.org/data/2.5/weather?q=${lastCitySearch.city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`
+      `http://api.openweathermap.org/data/2.5/weather?q=${city}&APPID=${process.env.API_KEY_FROM_OPEN_WEATHER}&units=metric`
     );
+    const userUID = await admin
+      .auth()
+      .getUserByEmail(email)
+      .then(function (userRecord) {
+        return userRecord.uid;
+      });
+    console.log(userUID);
+    const ref = database.ref("users/" + userUID);
+    await ref.update({
+      city: city,
+      api: "OpenWeatherMap",
+    });
     const dataResponse = await data.json();
-    console.log(dataResponse);
+    res.status(200).json({
+      dataResponse,
+    });
+  }
+);
+
+app.post(
+  "/getWeatherInfoFromWeatherstack",
+  authMiddleware,
+  jsonParser,
+  async (req, res) => {
+    const { email, city } = req.body;
+    const data = await fetch(
+      `http://api.weatherstack.com/current?access_key=${process.env.API_KEY_FROM_WEATHERSTACK}&query=${city}&units=m`
+    );
+    const userUID = await admin
+      .auth()
+      .getUserByEmail(email)
+      .then(function (userRecord) {
+        return userRecord.uid;
+      });
+    console.log(userUID);
+    const ref = database.ref("users/" + userUID);
+    await ref.update({
+      city: city,
+      api: "Weatherstack",
+    });
+    const dataResponse = await data.json();
     res.status(200).json({
       dataResponse,
     });
@@ -276,23 +277,24 @@ app.post("/createUser", jsonParser, async (req, res) => {
       return userRecord.uid;
     })
     .catch((error) => {
-      console.log("Error creating new user:", error);
-      return null;
+      console.log("Error creating new user:", error.code);
+      return error.code;
     });
   console.log(id);
-  if (id) {
+  if (id === "auth/email-already-exists") {
+    res.status(403).json({
+      message: "User with this email already exists",
+    });
+  } else {
     firebase
       .database()
       .ref("users/" + id)
       .set({
         city,
+        api: DEFAULT_API,
       });
-    res.sendStatus(200).json({
+    res.status(200).json({
       message: "OK",
-    });
-  } else {
-    res.sendStatus(409).json({
-      message: "error",
     });
   }
 });
