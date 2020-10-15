@@ -27,8 +27,8 @@ app.use((req, res, next) => {
   res.append("Access-Control-Allow-Origin", ["*"]);
   res.append("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
   res.append("Access-Control-Allow-Headers", ["Content-Type", "Authorization"]);
-  res.append("Access-Control-Expose-Headers", "Authorization") 
-  
+  res.append("Access-Control-Expose-Headers", "Authorization");
+
   next();
 });
 app.use(express.static("static"));
@@ -139,9 +139,6 @@ app.post("/login", jsonParser, async (req, res) => {
   res.status(200).json({
     message: "OK",
   });
-  // res.status(200).json({
-  //   message: "OK",
-  // });
 });
 
 app.post("/logout", jsonParser, async (req, res) => {
@@ -197,11 +194,36 @@ app.post(
     }
     const dataResponse = await data.json();
     console.log(dataResponse);
+    res.set("Content-Type", "application/json");
     res.status(200).json({
+      api: userInfo.api,
       dataResponse,
     });
   }
 );
+
+app.post("/signInWithGoogle", jsonParser, async (req, res) => {
+  const { id_token } = req.body;
+  console.log(id_token);
+  const credential = firebase.auth.GoogleAuthProvider.credential(id_token);
+
+  await firebase
+    .auth()
+    .signInWithCredential(credential)
+    .catch(function (error) {
+      // Handle Errors here.
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      // The email of the user's account used.
+      const email = error.email;
+      // The firebase.auth.AuthCredential type that was used.
+      const credential = error.credential;
+      // ...
+    });
+  res.status(200).json({
+    message: "OK",
+  });
+});
 
 app.post(
   "/getWeatherInfoFromOpenWeatherMap",

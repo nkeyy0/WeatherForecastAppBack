@@ -13,11 +13,10 @@ module.exports = (req, res, next) => {
 
   try {
     jwt.verify(token, secretKey);
+    next();
   } catch (error) {
     res.status(401).json({
       message: "Invalid token!",
     });
   }
-
-  next();
 };
