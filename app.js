@@ -206,6 +206,7 @@ app.post("/signInWithGoogle", jsonParser, async (req, res) => {
   const { id_token } = req.body;
   console.log(id_token);
   const credential = firebase.auth.GoogleAuthProvider.credential(id_token);
+  console.log(credential);
 
   await firebase
     .auth()
