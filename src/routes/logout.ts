@@ -1,9 +1,10 @@
-const { Router } = require("express");
-const firebase = require("firebase");
+import {Router, Request, Response, NextFunction} from 'express';
+import firebase from 'firebase';
+
 
 const router = Router();
 
-router.post("/", async (req, res) => {
+router.post("/", async (req:Request, res:Response) => {
   firebase
     .auth()
     .signOut()
@@ -15,4 +16,4 @@ router.post("/", async (req, res) => {
     });
 });
 
-module.exports = router;
+export default router;

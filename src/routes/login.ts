@@ -1,32 +1,40 @@
-const { Router } = require("express");
-const firebase = require("firebase");
-const admin = require("firebase-admin");
-const jwt = require("jsonwebtoken");
-const constants = require("../../constants/constants");
+import {Router, Request, Response, NextFunction} from 'express';
+import admin from 'firebase-admin';
+import jwt from 'jsonwebtoken';
+import constants from "../constants/constants";
+import config from '../config/app';
+import firebase from 'firebase';
+
 
 const router = Router();
 
-router.post("/", async (req, res) => {
+router.post("/", async (req:Request, res:Response) => {
   const { email, password } = req.body;
   try {
-    const error = await firebase
+    const error: string | undefined = await firebase
       .auth()
       .signInWithEmailAndPassword(email, password)
       .catch((error) => {
-        console.log(error.code);
-        return error.code;
+        return error.message;
       });
+      console.log(error);
     if (error === constants.AUTH_USER_NOT_FOUND) {
-      const error = new Error();
-      error.message = "User with this email was not found";
+      const errorDB = new Error();
+      errorDB.message = "User with this email was not found";
       throw error;
     }
     if (error === constants.AUTH_WRONG_PASSWORD) {
-      const error = new Error();
-      error.message = "Incorrect password. Try it again";
+      const errorDB = new Error();
+      errorDB.message = "Incorrect password. Try it again";
       throw error;
     }
-    const userResult = await admin
+    if(error){
+      const errorDB = new Error();
+      errorDB.message = error;
+      throw errorDB;
+    }
+    
+    const userResult: {name ? : string | undefined, email? : string | undefined, uid? : string | undefined, code?: string | undefined} = await admin
       .auth()
       .getUserByEmail(email)
       .then(function (userRecord) {
@@ -38,15 +46,12 @@ router.post("/", async (req, res) => {
       })
       .catch((error) => error);
     const ref = firebase.database().ref("users/" + userResult.uid);
-    const userCitySearch = await new Promise((resolve, reject) => {
+    const userCitySearch: string | undefined = await new Promise((resolve, reject) => {
       ref.on(
         "value",
         (snapshot) => {
           console.log(snapshot.val());
           resolve(snapshot.val().city);
-        },
-        (err) => {
-          reject(err.code);
         }
       );
     });
@@ -61,7 +66,7 @@ router.post("/", async (req, res) => {
         userCity: userCitySearch,
         userEmail: userResult.email,
       },
-      process.env.jwtSecretKey,
+      config.jwtSecretKey,
       { expiresIn: 60 * 60 }
     );
     res.setHeader("Authorization", `Bearer ${token}`);
@@ -84,7 +89,12 @@ router.post("/", async (req, res) => {
         message: error.message,
       });
     }
+    else {
+      res.status(404).json({
+        message: error.message
+      })
+    }
   }
 });
 
-module.exports = router;
+export default router;

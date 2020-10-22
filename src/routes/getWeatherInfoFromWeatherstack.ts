@@ -1,12 +1,12 @@
-const { Router } = require("express");
-const authMiddleware = require("../../middleware/auth");
-const firebase = require("firebase");
-const admin = require("firebase-admin");
-const fetch = require("node-fetch");
+import {Router, Request, Response, NextFunction} from 'express';
+import authMiddleware from '../middleware/auth';
+import firebase from 'firebase';
+import admin from 'firebase-admin';
+import fetch from 'node-fetch';
 
 const router = Router();
 
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/", authMiddleware, async (req:Request, res:Response) => {
   const { email, city } = req.body;
   try {
     const data = await fetch(
@@ -48,4 +48,4 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
