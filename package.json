@@ -4,7 +4,7 @@
   "description": "wether forecast app back end",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon src/app.ts",
+    "start": "nodemon app.ts",
     "server": "nodemon app.js"
   },
   "keywords": [

@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import authMiddleware from "../middleware/auth";
-import firebase from "firebase";
-import admin from "firebase-admin";
+import { database} from "firebase";
+import {auth} from "firebase-admin";
 import fetch from "node-fetch";
 
 const router = Router();
@@ -10,8 +10,7 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
   const { email } = req.body;
   console.log(email);
   try {
-    const userUID: string | undefined = await admin
-      .auth()
+    const userUID: string | undefined = await auth()
       .getUserByEmail(email)
       .then(function (userRecord) {
         return userRecord.uid;
@@ -23,7 +22,7 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
       throw error;
     }
     console.log(userUID);
-    const ref = firebase.database().ref("users/" + userUID);
+    const ref = database().ref("users/" + userUID);
     const userInfo: {
       city: string | undefined;
       api: string | undefined;

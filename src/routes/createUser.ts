@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import firebase from "firebase";
 import admin from "firebase-admin";
-const constants = require("../constants/constants");
+import constants from "../constants/constants";
 
 const router = Router();
 

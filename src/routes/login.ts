@@ -90,7 +90,7 @@ router.post("/", async (req:Request, res:Response) => {
       });
     }
     else {
-      res.status(404).json({
+      res.status(400).json({
         message: error.message
       })
     }
