@@ -1,12 +1,11 @@
-import {Router, Request, Response, NextFunction} from 'express';
-import authMiddleware from '../middleware/auth';
-import firebase from 'firebase';
-import admin from 'firebase-admin';
-import fetch from 'node-fetch';
+import { Router, Request, Response, NextFunction } from "express";
+import authMiddleware from "../middleware/auth";
+import { auth, database } from "firebase-admin";
+import fetch from "node-fetch";
 
 const router = Router();
 
-router.post("/", authMiddleware, async (req:Request, res:Response) => {
+router.post("/", authMiddleware, async (req: Request, res: Response) => {
   const { email, city } = req.body;
   try {
     const data = await fetch(
@@ -18,8 +17,7 @@ router.post("/", authMiddleware, async (req:Request, res:Response) => {
       error.message = "Error receiving data from server";
       throw error;
     }
-    const userUID = await admin
-      .auth()
+    const userUID = await auth()
       .getUserByEmail(email)
       .then(function (userRecord) {
         return userRecord.uid;
@@ -32,7 +30,7 @@ router.post("/", authMiddleware, async (req:Request, res:Response) => {
       throw error;
     }
     console.log(userUID);
-    const ref = firebase.database().ref("users/" + userUID);
+    const ref = database().ref("users/" + userUID);
     await ref.update({
       city: city,
       api: "Weatherstack",

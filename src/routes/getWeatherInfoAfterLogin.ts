@@ -1,7 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import authMiddleware from "../middleware/auth";
-import { database} from "firebase";
-import {auth} from "firebase-admin";
+import {auth, database} from "firebase-admin";
 import fetch from "node-fetch";
 
 const router = Router();

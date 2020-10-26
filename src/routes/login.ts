@@ -3,36 +3,37 @@ import admin from 'firebase-admin';
 import jwt from 'jsonwebtoken';
 import constants from "../constants/constants";
 import config from '../config/app';
-import firebase from 'firebase';
+import firebase, {FirebaseError} from 'firebase';
 
 
 const router = Router();
 
 router.post("/", async (req:Request, res:Response) => {
   const { email, password } = req.body;
+  console.log(email, password)
   try {
-    const error: string | undefined = await firebase
-      .auth()
-      .signInWithEmailAndPassword(email, password)
-      .catch((error) => {
-        return error.message;
-      });
-      console.log(error);
-    if (error === constants.AUTH_USER_NOT_FOUND) {
-      const errorDB = new Error();
-      errorDB.message = "User with this email was not found";
-      throw error;
-    }
-    if (error === constants.AUTH_WRONG_PASSWORD) {
-      const errorDB = new Error();
-      errorDB.message = "Incorrect password. Try it again";
-      throw error;
-    }
-    if(error){
-      const errorDB = new Error();
-      errorDB.message = error;
-      throw errorDB;
-    }
+    // const error: FirebaseError = await firebase
+    //   .auth()
+    //   .signInWithEmailAndPassword(email, password)
+    //   .catch((error) => {
+    //     return error;
+    //   });
+    //   console.log(error);
+    // if (error.code === constants.AUTH_USER_NOT_FOUND) {
+    //   const errorDB = new Error();
+    //   errorDB.message = "User with this email was not found";
+    //   throw error;
+    // }
+    // if (error.code === constants.AUTH_WRONG_PASSWORD) {
+    //   const errorDB = new Error();
+    //   errorDB.message = "Incorrect password. Try it again";
+    //   throw error;
+    // }
+    // if(error.code){
+    //   const errorDB = new Error();
+    //   errorDB.message = error.message;
+    //   throw errorDB;
+    // }
     
     const userResult: {name ? : string | undefined, email? : string | undefined, uid? : string | undefined, code?: string | undefined} = await admin
       .auth()
@@ -45,7 +46,7 @@ router.post("/", async (req:Request, res:Response) => {
         };
       })
       .catch((error) => error);
-    const ref = firebase.database().ref("users/" + userResult.uid);
+    const ref = admin.database().ref("users/" + userResult.uid);
     const userCitySearch: string | undefined = await new Promise((resolve, reject) => {
       ref.on(
         "value",

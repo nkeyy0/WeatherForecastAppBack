@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 import serviceAccount from "./ServiceAccountKey/serviceAccountKey.json";
-import config from "./src/config/app";
+ import config from "./src/config/app";
 import loginRoute from "./src/routes/login";
 import logoutRoute from "./src/routes/logout";
 import getWeatherInfoAfterLoginRouter from "./src/routes/getWeatherInfoAfterLogin";
@@ -17,8 +17,6 @@ import createUserRouter from "./src/routes/createUser";
 
 
 const app = express();
-
-const jsonParser = bodyParser.json();
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.append("Access-Control-Allow-Origin", ["*"]);
@@ -47,6 +45,7 @@ admin.initializeApp({
 
 console.log(config.configFirebase)
 firebase.initializeApp(config.configFirebase);
+
 
 app.use("/login", loginRoute);
 app.use("/logout", logoutRoute);

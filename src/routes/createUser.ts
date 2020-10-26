@@ -48,7 +48,7 @@ router.post("/", async (req: Request, res: Response) => {
         "Invalid password: password must be more than 6 characters";
       throw error;
     }
-    firebase
+    admin
       .database()
       .ref("users/" + id)
       .set({
