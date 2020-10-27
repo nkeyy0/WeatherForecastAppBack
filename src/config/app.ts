@@ -4,9 +4,10 @@ export default {
     apiKey: process.env.apiKey,
     authDomain: process.env.authDomain,
     databaseURL: process.env.databaseURL,
+    projectId: process.env.projectId,
     storageBucket: process.env.storageBucket,
     messagingSenderId: process.env.messagingSenderId,
-    appId: process.env.appId,
+    appId: process.env.addId,
     measurementId: process.env.measurementId
   },
   jwtSecretKey: process.env.jwtSecretKey || 'text'

@@ -12,28 +12,28 @@ router.post("/", async (req:Request, res:Response) => {
   const { email, password } = req.body;
   console.log(email, password)
   try {
-    // const error: FirebaseError = await firebase
-    //   .auth()
-    //   .signInWithEmailAndPassword(email, password)
-    //   .catch((error) => {
-    //     return error;
-    //   });
-    //   console.log(error);
-    // if (error.code === constants.AUTH_USER_NOT_FOUND) {
-    //   const errorDB = new Error();
-    //   errorDB.message = "User with this email was not found";
-    //   throw error;
-    // }
-    // if (error.code === constants.AUTH_WRONG_PASSWORD) {
-    //   const errorDB = new Error();
-    //   errorDB.message = "Incorrect password. Try it again";
-    //   throw error;
-    // }
-    // if(error.code){
-    //   const errorDB = new Error();
-    //   errorDB.message = error.message;
-    //   throw errorDB;
-    // }
+    const error: FirebaseError = await firebase
+      .auth()
+      .signInWithEmailAndPassword(email, password)
+      .catch((error) => {
+        return error;
+      });
+      console.log(error);
+    if (error.code === constants.AUTH_USER_NOT_FOUND) {
+      const errorDB = new Error();
+      errorDB.message = "User with this email was not found";
+      throw error;
+    }
+    if (error.code === constants.AUTH_WRONG_PASSWORD) {
+      const errorDB = new Error();
+      errorDB.message = "Incorrect password. Try it again";
+      throw error;
+    }
+    if(error.code){
+      const errorDB = new Error();
+      errorDB.message = error.message;
+      throw errorDB;
+    }
     
     const userResult: {name ? : string | undefined, email? : string | undefined, uid? : string | undefined, code?: string | undefined} = await admin
       .auth()

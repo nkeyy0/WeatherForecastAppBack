@@ -1,4 +1,4 @@
-import  admin, {ServiceAccount} from "firebase-admin";
+import admin, { ServiceAccount } from "firebase-admin";
 import bodyParser from "body-parser";
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
@@ -7,14 +7,13 @@ import dotenv from "dotenv";
 
 dotenv.config();
 import serviceAccount from "./ServiceAccountKey/serviceAccountKey.json";
- import config from "./src/config/app";
+import config from "./src/config/app";
 import loginRoute from "./src/routes/login";
 import logoutRoute from "./src/routes/logout";
 import getWeatherInfoAfterLoginRouter from "./src/routes/getWeatherInfoAfterLogin";
 import getWeatherInfoFromOpenWeatherMapRouter from "./src/routes/getWeatherInfoFromOpenWeatherMap";
 import getWeatherInfoFromWeatherstackRouter from "./src/routes/getWeatherInfoFromWeatherstack";
 import createUserRouter from "./src/routes/createUser";
-
 
 const app = express();
 
@@ -31,7 +30,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
-
 const params: ServiceAccount = {
   projectId: serviceAccount.project_id,
   clientEmail: serviceAccount.client_email,
@@ -43,9 +41,8 @@ admin.initializeApp({
   databaseURL: "https://weatherappback.firebaseio.com",
 });
 
-console.log(config.configFirebase)
+console.log(config.configFirebase);
 firebase.initializeApp(config.configFirebase);
-
 
 app.use("/login", loginRoute);
 app.use("/logout", logoutRoute);
