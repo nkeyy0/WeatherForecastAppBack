@@ -6,7 +6,8 @@ import fetch from "node-fetch";
 const router = Router();
 
 router.post("/", authMiddleware, async (req: Request, res: Response) => {
-  const { email, city } = req.body;
+  const email: string = req.body.email;
+  const city: string = req.body.city;
   try {
     const data = await fetch(
       `http://api.weatherstack.com/current?access_key=${process.env.API_KEY_FROM_WEATHERSTACK}&query=${city}&units=m`

@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import firebase from "firebase";
-import admin from "firebase-admin";
+import admin, { FirebaseError } from "firebase-admin";
 import constants from "../constants/constants";
 
 const router = Router();
@@ -9,7 +9,7 @@ router.post("/", async (req: Request, res: Response) => {
   const { name, surname, patronymic, city, email, password } = req.body;
   console.log(name, surname, patronymic, city, email, password);
   try {
-    const id = await admin
+    const id : string = await admin
       .auth()
       .createUser({
         email: email,
@@ -22,7 +22,7 @@ router.post("/", async (req: Request, res: Response) => {
         console.log("Successfully created new user:", userRecord.email);
         return userRecord.uid;
       })
-      .catch((error) => {
+      .catch((error: FirebaseError) => {
         console.log("Error creating new user:", error.code);
         return error.code;
       });
