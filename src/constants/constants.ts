@@ -1,6 +1,3 @@
-
-export default {
-    AUTH_USER_NOT_FOUND : 'auth/user-not-found',
-    AUTH_WRONG_PASSWORD : 'auth/wrong-password',
-    DEFAULT_API: 'OpenWeatherMap'
-}
+export const DEFAULT_API = "OpenWeatherMap";
+export const OPEN_WEATHER_MAP_API = "OpenWeatherMap";
+export const WEATHERSTACK_API = "Weatherstack";

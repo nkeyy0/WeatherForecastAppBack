@@ -1,7 +1,7 @@
 import admin, { ServiceAccount } from "firebase-admin";
 import bodyParser from "body-parser";
 import cors from "cors";
-import express, { Request, Response, NextFunction } from "express";
+import express, { Request, Response, NextFunction, ErrorRequestHandler } from "express";
 import firebase from "firebase";
 import dotenv from "dotenv";
 
@@ -56,7 +56,11 @@ app.use(
   "/getWeatherInfoFromOpenWeatherMap",
   getWeatherInfoFromOpenWeatherMapRouter
 );
-// app.use("/signInWithGoogle", signInWithGoogleRouter);
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
 
 app.listen(config.PORT, () => {
   console.log(`Server has been started at http://localhost:${config.PORT}`);

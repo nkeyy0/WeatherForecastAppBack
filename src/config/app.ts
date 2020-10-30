@@ -7,7 +7,7 @@ export default {
     projectId: process.env.projectId,
     storageBucket: process.env.storageBucket,
     messagingSenderId: process.env.messagingSenderId,
-    appId: process.env.addId,
+    appId: process.env.appId,
     measurementId: process.env.measurementId
   },
   jwtSecretKey: process.env.jwtSecretKey || 'text'

@@ -24,7 +24,6 @@ router.post("/", authMiddleware, async (req: Request, res: Response) => {
         return userRecord.uid;
       })
       .catch((error) => error);
-    console.log(userUID);
     if (userUID.code === "auth/user-not-found") {
       const error = new Error();
       error.message = "User not found";
