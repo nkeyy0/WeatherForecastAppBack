@@ -4,10 +4,11 @@ import {
   createUserService,
   loginUserService
 } from "../services/UserService";
-import { getWeatherService } from "../services/WeatherService";
+import { getWeatherService, getWeatherAgain } from "../services/WeatherService";
 import { IUser } from "../interfaces/interfaces";
+import { ErrorHandler } from "../helpers/error";
 
-export default async function createUser(req: Request, res: Response) {
+export async function createUser(req: Request, res: Response) {
   const { name, surname, patronymic, city, email, password } = req.body;
   const User: IUser = {
     name,
@@ -17,16 +18,13 @@ export default async function createUser(req: Request, res: Response) {
     email,
     password,
   };
-  const isUserCreated = await createUserService(User);
+  
+    const isUserCreated = await createUserService(User);
   if (isUserCreated) {
     return res.status(200).json({
       message: "User created successfully",
     });
-  } else {
-    res.status(404).json({
-      message: "User with this email already exists",
-    });
-  }
+  } 
 }
 
 export async function getUserWeatherByEmail(req: Request, res: Response) {
@@ -59,5 +57,19 @@ export async function loginUser(req: Request, res: Response) {
     res.status(401).json({
       message: error.message,
     });
+  }
+}
+
+export async function getWeatherInfo(req:Request, res: Response) {
+  const {email, city, api} = req.body;
+  try {
+    const result = await getWeatherAgain(email, city, api);
+    res.status(200).json({
+      result
+    })
+  } catch (error) {
+    res.status(404).json({
+      message: error.message
+    })
   }
 }

@@ -7,6 +7,8 @@ import {
   IUserRecord,
 } from "../interfaces/interfaces";
 import { DEFAULT_API } from "../constants/constants";
+import { transformAuthInfo } from "passport";
+import { ErrorHandler } from "../helpers/error";
 
 export async function createUserRepo(User: IUser) {
   try {
@@ -25,7 +27,7 @@ export async function createUserRepo(User: IUser) {
       .catch((error: FirebaseError) => {
         console.log("Error creating new user:", error.code);
         if (error.code === "auth/email-already-exists") {
-          throw error.code;
+           throw new ErrorHandler(404, 'Email already exist');;
         }
       });
     database()
@@ -36,7 +38,8 @@ export async function createUserRepo(User: IUser) {
       });
     return true;
   } catch (error) {
-    return error;
+    console.log(error);
+    return false;
   }
 }
 
@@ -63,11 +66,11 @@ export async function getUserCityByEmailRepo(email: string) {
 
 export async function loginUserRepo(loginData: ILoginData) {
   try {
-    const error = await firebase
+    await firebase
       .auth()
       .signInWithEmailAndPassword(loginData.email, loginData.password)
       .catch((error: FirebaseError) => {
-        throw error.code;
+        throw error;
       });
     const userResult = await auth()
       .getUserByEmail(loginData.email)
@@ -82,20 +85,38 @@ export async function loginUserRepo(loginData: ILoginData) {
         throw error;
       });
     const ref = database().ref("users/" + userResult.uid);
-    const userCitySearch: string = await new Promise(
-      (resolve, reject) => {
-        ref.on("value", (snapshot) => {
-          console.log(snapshot.val());
-          resolve(snapshot.val().city);
-        });
-      }
-    );
+    const userCitySearch: string | undefined = await new Promise((resolve, reject) => {
+      ref.on("value", (snapshot) => {
+        console.log(snapshot.val());
+        resolve(snapshot.val().city);
+      });
+    });
     return {
-        name: userResult.displayName,
-        email: userResult.email,
-        city: userCitySearch
-    }
+      displayName: userResult.displayName,
+      email: userResult.email,
+      city: userCitySearch,
+    };
   } catch (error) {
-      return error;
+    return error;
   }
+}
+
+export async function UpdateUserInfo(email: string, city: string, api: string) {
+  try {
+    const userUID = await auth()
+    .getUserByEmail(email)
+    .then(function (userRecord) {
+      return userRecord.uid;
+    })
+    .catch((error) => error);
+  const ref = database().ref("users/" + userUID);
+  await ref.update({
+    city: city,
+    api: api,
+  });
+  return true;
+  } catch (error) {
+    return false;
+  }
+  
 }

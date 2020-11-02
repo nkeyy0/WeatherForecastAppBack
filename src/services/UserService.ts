@@ -5,14 +5,20 @@ import { getWeatherService } from "./WeatherService";
 import { IUserCity, IUser, ILoginData } from "../interfaces/interfaces";
 
 export async function createUserService(User: IUser) {
-  const isUserCreate: boolean = await domain.createUserDomain(User);
+  try {
+    const isUserCreate: boolean = await domain.createUserDomain(User);
   return isUserCreate;
+  } catch (error) {
+    console.log(error)
+    throw error;
+  }
+  
 }
 
 export async function getUserWeatherByEmailService(email: string) {
   try {
     const userCity: IUserCity = await domain.getUserCityByEmailDomain(email);
-    const weatherInfo = await getWeatherService(userCity.api, userCity.api);
+    const weatherInfo = await getWeatherService(userCity.city, userCity.api);
     return weatherInfo;
   } catch (error) {
     error;
