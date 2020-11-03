@@ -20,14 +20,12 @@ export async function createUserRepo(User: IUser) {
         displayName: `${User.name} ${User.surname} ${User.patronymic}`,
         disabled: false,
       })
-      .then((userRecord) => {
-        console.log("Successfully created new user:", userRecord.email);
+      .then((userRecord: auth.UserRecord) => {
         return userRecord.uid;
       })
       .catch((error: FirebaseError) => {
-        console.log("Error creating new user:", error.code);
         if (error.code === "auth/email-already-exists") {
-           throw new ErrorHandler(404, 'Email already exist');;
+          throw new ErrorHandler(404, "Email already exist");
         }
       });
     database()
@@ -38,30 +36,34 @@ export async function createUserRepo(User: IUser) {
       });
     return true;
   } catch (error) {
-    console.log(error);
-    return false;
+    throw error;
   }
 }
 
 export async function getUserCityByEmailRepo(email: string) {
-  const userUID: string | undefined = await auth()
-    .getUserByEmail(email)
-    .then(function (userRecord) {
-      return userRecord.uid;
+  try {
+    const userUID: string | undefined = await auth()
+      .getUserByEmail(email)
+      .then(function (userRecord: auth.UserRecord) {
+        return userRecord.uid;
+      })
+      .catch((error: FirebaseError) => {
+        if (error.code === "auth/user-not-found") {
+          throw new ErrorHandler(404, "Database: User not found");
+        } else {
+          throw new ErrorHandler(404, `Database: ${error.message}`);
+        }
+      });
+    const ref = database().ref("users/" + userUID);
+    const userCity: IUserCity = await new Promise((resolve, reject) => {
+      ref.on("value", (snapshot: database.DataSnapshot) => {
+        resolve({ city: snapshot.val().city, api: snapshot.val().api });
+      });
     });
-  if (userUID === undefined) {
-    const error = new Error();
-    error.message = "User not found";
+    return userCity;
+  } catch (error) {
     throw error;
   }
-  console.log(userUID);
-  const ref = database().ref("users/" + userUID);
-  const userCity: IUserCity = await new Promise((resolve, reject) => {
-    ref.on("value", (snapshot) => {
-      resolve({ city: snapshot.val().city, api: snapshot.val().api });
-    });
-  });
-  return userCity;
 }
 
 export async function loginUserRepo(loginData: ILoginData) {
@@ -70,11 +72,13 @@ export async function loginUserRepo(loginData: ILoginData) {
       .auth()
       .signInWithEmailAndPassword(loginData.email, loginData.password)
       .catch((error: FirebaseError) => {
-        throw error;
+        if(error.code === 'auth/wrong-password'){
+          throw new ErrorHandler(401, `Database error:${error.message}`);
+        }
       });
     const userResult = await auth()
       .getUserByEmail(loginData.email)
-      .then((userRecord) => {
+      .then((userRecord: auth.UserRecord) => {
         return {
           displayName: userRecord.displayName,
           email: userRecord.email,
@@ -82,41 +86,58 @@ export async function loginUserRepo(loginData: ILoginData) {
         };
       })
       .catch((error: FirebaseError) => {
-        throw error;
+        throw new ErrorHandler(401, `Database error: ${error.message}`);
       });
+    if (!userResult.displayName) {
+      throw new ErrorHandler(404, "Database error: User name is empty!");
+    }
+    if (!userResult.email) {
+      throw new ErrorHandler(404, "Database error: Email is empty!");
+    }
     const ref = database().ref("users/" + userResult.uid);
-    const userCitySearch: string | undefined = await new Promise((resolve, reject) => {
-      ref.on("value", (snapshot) => {
-        console.log(snapshot.val());
-        resolve(snapshot.val().city);
-      });
-    });
-    return {
+    const userCitySearch: string | undefined = await new Promise(
+      (resolve, reject) => {
+        ref.on("value", (snapshot) => {
+          console.log(snapshot.val());
+          resolve(snapshot.val().city);
+        });
+      }
+    );
+    if (!userCitySearch) {
+      throw new ErrorHandler(404, "Database error: City is empty!");
+    }
+    const userInfo = {
       displayName: userResult.displayName,
       email: userResult.email,
       city: userCitySearch,
     };
+    return userInfo;
   } catch (error) {
-    return error;
+    throw error;
   }
 }
 
 export async function UpdateUserInfo(email: string, city: string, api: string) {
   try {
     const userUID = await auth()
-    .getUserByEmail(email)
-    .then(function (userRecord) {
-      return userRecord.uid;
-    })
-    .catch((error) => error);
-  const ref = database().ref("users/" + userUID);
-  await ref.update({
-    city: city,
-    api: api,
-  });
-  return true;
+      .getUserByEmail(email)
+      .then(function (userRecord) {
+        return userRecord.uid;
+      })
+      .catch((error) => {
+        if (error.code === "auth/user-not-found") {
+          throw new ErrorHandler(404, "Database: User not found");
+        } else {
+          throw new ErrorHandler(404, `Database: ${error.message}`);
+        }
+      });
+    const ref = database().ref("users/" + userUID);
+    await ref.update({
+      city: city,
+      api: api,
+    });
+    return true;
   } catch (error) {
-    return false;
+    throw error;
   }
-  
 }

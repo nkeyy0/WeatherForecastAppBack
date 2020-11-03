@@ -8,7 +8,7 @@ import {DEFAULT_API} from "../constants/constants";
 const router = Router();
 
 router.post("/", async (req: Request, res: Response, next: NextFunction) => {
-  await createUser(req, res);
+  await createUser(req, res, next);
 });
 
 export default router;

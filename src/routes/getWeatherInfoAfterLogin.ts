@@ -6,8 +6,8 @@ import { getUserWeatherByEmail } from "../controllers/UserController";
 
 const router = Router();
 
-router.post("/", authMiddleware, async (req: Request, res: Response) => {
- await getUserWeatherByEmail(req, res);
+router.post("/", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+ await getUserWeatherByEmail(req, res, next);
 });
 
 export default router;

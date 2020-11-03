@@ -14,7 +14,7 @@ export const domain = {
       const result: IUserCity = await getUserCityByEmailRepo(email);
       return result;
     } catch (error) {
-      return error;
+      throw error;
     }
   },
   createUserDomain: async (User: IUser) => {
@@ -22,19 +22,16 @@ export const domain = {
       const isUserCreate: boolean = await createUserRepo(User);
       return isUserCreate;
     } catch (error) {
-      console.log(error);
       throw error;
     }
   },
   loginUser: async (loginData: ILoginData) => {
     try {
-      const userInfo: IUserInfoForJWT = await loginUserMapper(loginData);
+      const userInfo = await loginUserMapper(loginData);
       const jwt = await createJWT(userInfo);
       return jwt;
-      console.log(jwt);
     } catch (error) {
-      return error;
-      console.log(error);
+      throw error;
     }
   },
   updateUserInfo: async (email:string, city: string, api: string) => {
@@ -42,7 +39,7 @@ export const domain = {
       const userUpdateResult: boolean = await UpdateUserInfo(email, city, api);
       return userUpdateResult;
     } catch (error) {
-      return null;
+      throw error;
     }
     
   }

@@ -9,7 +9,6 @@ export async function createUserService(User: IUser) {
     const isUserCreate: boolean = await domain.createUserDomain(User);
   return isUserCreate;
   } catch (error) {
-    console.log(error)
     throw error;
   }
   
@@ -21,7 +20,7 @@ export async function getUserWeatherByEmailService(email: string) {
     const weatherInfo = await getWeatherService(userCity.city, userCity.api);
     return weatherInfo;
   } catch (error) {
-    error;
+    throw error;
   }
 }
 
@@ -30,6 +29,6 @@ export async function loginUserService(loginInfo: ILoginData) {
         const jwt = await domain.loginUser(loginInfo);
         return jwt;
     } catch (error) {
-        return error;
+        throw error;
     }
 }
