@@ -25,6 +25,7 @@
     "express": "^4.17.1",
     "express-jwt": "^6.0.0",
     "express-session": "^1.17.1",
+    "express-validator": "^6.6.1",
     "firebase": "^7.21.0",
     "firebase-admin": "^9.2.0",
     "firebase-tools": "^8.11.0",

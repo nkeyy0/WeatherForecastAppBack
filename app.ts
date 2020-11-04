@@ -13,7 +13,7 @@ dotenv.config();
 import serviceAccount from "./ServiceAccountKey/serviceAccountKey.json";
 import config from "./src/config/app";
 import loginRoute from "./src/routes/login";
-import getWeatherInfoAfterLoginRouter from "./src/routes/getWeatherInfoAfterLogin";
+
 import getWeatherInfoRouter from "./src/routes/getWeatherInfo";
 import createUserRouter from "./src/routes/createUser";
 import { ErrorHandler } from "./src/helpers/error";
@@ -45,7 +45,6 @@ firebase.initializeApp(config.configFirebase);
 
 app.use("/login", loginRoute);
 app.use("/createUser", createUserRouter);
-app.use("/getWeatherInfoAfterLogin", getWeatherInfoAfterLoginRouter);
 app.use("/getWeatherInfo", getWeatherInfoRouter);
 
 app.use(
