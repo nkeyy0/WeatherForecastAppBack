@@ -7,17 +7,20 @@ import express, {
   NextFunction,
   ErrorRequestHandler,
 } from "express";
+import mongoose, { connect } from "mongoose";
 import firebase from "firebase";
 import dotenv from "dotenv";
 dotenv.config();
 import serviceAccount from "./ServiceAccountKey/serviceAccountKey.json";
 import config from "./src/config/app";
 import loginRoute from "./src/routes/login";
-
 import getWeatherInfoRouter from "./src/routes/getWeatherInfo";
 import createUserRouter from "./src/routes/createUser";
+import getCitiesRouter from "./src/routes/getCities";
+import getWeatherForOneCityRouter from "./src/routes/getWeatherForOneCity";
+import deleteUserCityRouter from './src/routes/deleteCity';
 import { ErrorHandler } from "./src/helpers/error";
-import {handleError} from './src/middleware/errorHandler';
+import { handleError } from "./src/middleware/errorHandler";
 import corsMiddleware from "./src/middleware/cors";
 
 const app = express();
@@ -46,6 +49,9 @@ firebase.initializeApp(config.configFirebase);
 app.use("/login", loginRoute);
 app.use("/createUser", createUserRouter);
 app.use("/getWeatherInfo", getWeatherInfoRouter);
+app.use("/getCities", getCitiesRouter);
+app.use("/getWeatherForOnceCity", getWeatherForOneCityRouter);
+app.use("/deleteUserCity", deleteUserCityRouter);
 
 app.use(
   (err: ErrorHandler, req: Request, res: Response, next: NextFunction) => {
@@ -53,7 +59,27 @@ app.use(
     next();
   }
 );
+app.use(
+  (err: ErrorHandler, req: Request, res: Response, next: NextFunction) => {
+    res.locals.error = err;
+    const status = err.statusCode || 500;
+    res.status(status).json({
+      message: err.message,
+    });
+  }
+);
 
-app.listen(config.PORT, () => {
-  console.log(`Server has been started at http://localhost:${config.PORT}`);
-});
+async function start() {
+  try {
+    const url: string = `mongodb+srv://nkeyy0:${config.passwordMongo}@cluster0.ekj6m.mongodb.net/WeatherInfo?retryWrites=true&w=majority`;
+
+    await connect(url, { useUnifiedTopology: true, useNewUrlParser: true });
+    app.listen(config.PORT, () => {
+      console.log(`Server has been started at http://localhost:${config.PORT}`);
+    });
+  } catch (error) {
+    console.log(error.message);
+  }
+}
+
+start();

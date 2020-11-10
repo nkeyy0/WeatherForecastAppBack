@@ -10,7 +10,7 @@ import { DEFAULT_API } from "../constants/constants";
 import { transformAuthInfo } from "passport";
 import { ErrorHandler } from "../helpers/error";
 
-export const repository = {
+export const firebaseUserRepository = {
   createUser: async (User: IUser) => {
 
       const id: string | void = await auth()
@@ -125,25 +125,32 @@ export const repository = {
         city: city,
         api: api,
       });
-      return true;
+      return userUID;
     } catch (error) {
       throw error;
     }
+  },
+  getUserUID : async (email:string) => {
+    try {
+      console.log(email);
+      const userUID = await auth()
+        .getUserByEmail(email)
+        .then(function (userRecord) {
+          return userRecord.uid;
+        })
+        .catch((error) => {
+          if (error.code === "auth/user-not-found") {
+            throw new ErrorHandler(404, "Database: User not found");
+          } else {
+            throw new ErrorHandler(404, `Database: ${error.message}`);
+          }
+        });
+        return userUID;
+    } catch (error) {
+      throw error;
+    }
+    
   }
 }
 
-export async function createUserRepo(User: IUser) {
-  
-}
 
-export async function getUserCityByEmailRepo(email: string) {
-  
-}
-
-export async function loginUserRepo(loginData: ILoginData) {
- 
-}
-
-export async function UpdateUserInfo(email: string, city: string, api: string) {
-  
-}

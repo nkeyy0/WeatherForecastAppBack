@@ -6,8 +6,6 @@ import {
 import { ErrorHandler } from "../helpers/error";
 import {
   IOpenWeatherMapInfo,
-  IWeatherstackError,
-  IWeatherstackSucess,
 } from "../interfaces/interfaces";
 
 export async function getWeatherFromOpenWeather(city: string) {

@@ -8,7 +8,8 @@ export default {
     storageBucket: process.env.storageBucket,
     messagingSenderId: process.env.messagingSenderId,
     appId: process.env.appId,
-    measurementId: process.env.measurementId
+    measurementId: process.env.measurementId,
   },
-  jwtSecretKey: process.env.jwtSecretKey || 'text'
+  jwtSecretKey: process.env.jwtSecretKey || "text",
+  passwordMongo: process.env.mongoPass,
 };

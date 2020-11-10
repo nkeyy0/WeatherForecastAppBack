@@ -1,7 +1,4 @@
-import { use } from "passport";
-import { ErrorHandler } from "../helpers/error";
-import { ILoginData, IUserInfoFromRepo } from "../interfaces/interfaces";
-import { repository } from "../repository/UserRepository";
+import { IUserInfoFromRepo } from "../interfaces/interfaces";
 
 export function loginUserMapper(userInfo: IUserInfoFromRepo) {
   const name: string = userInfo.displayName.split(" ")[0];

@@ -2,12 +2,9 @@ import { NextFunction, Request, Response } from "express";
 import {
   userService
 } from "../services/UserService";
-import { weatherService } from "../services/WeatherService";
 import { IUser } from "../interfaces/interfaces";
 import { ErrorHandler } from "../helpers/error";
-import { error } from "console";
-import { nextTick } from "process";
-import { use } from "passport";
+
 
 export const userController = {
   createUser : async (req: Request,
@@ -78,6 +75,41 @@ export const userController = {
       } catch (error) {
         next(error);
       }
+  },
+  getCities: async (req:Request, res: Response, next: NextFunction) => {
+    const email: string = req.body.email;
+    try {
+      const cities = await userService.getCities(email);
+      res.status(200).json({
+        cities
+      })
+    } catch (error) {
+      next(error);
+    }
+  },
+  getWeatherForOneCity: async (req:Request, res: Response, next: NextFunction) => {
+    const city: string = req.body.city;
+    const email: string = req.body.email;
+    try {
+      const weatherInfoForCity = await userService.getWeatherForOneCity(city, email);
+      res.status(200).json({
+        weatherInfoForCity
+      })
+    } catch (error) {
+      next(error);
+    }
+  },
+  deleteUserCity: async (req:Request, res: Response, next: NextFunction) => {
+    const city: string = req.body.city;
+    const email: string = req.body.email;
+    try {
+      const deleteResult = await userService.deleteCity(city, email);
+      res.status(200).json({
+        message: `${city} deleted from DB`
+      })
+    } catch (error) {
+      next(error);
+    }
   }
 }
 
