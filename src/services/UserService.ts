@@ -5,6 +5,7 @@ import {
   IUser,
   ILoginData,
 } from "../interfaces/interfaces";
+import { weatherRepository } from "../repository/WeatherRepository";
 
 export const userService = {
   createUser: async (User: IUser) => {
@@ -17,11 +18,15 @@ export const userService = {
   },
   getUserWeatherByEmail: async (email: string) => {
     const userCity: IUserCity = await domain.getUserCityByEmail(email);
-    const weatherInfo = await weatherService.getWeather(
+    const weatherResponse = await weatherService.getWeather(
       userCity.city,
       userCity.api
     );
-    return weatherInfo;
+    const uid = await domain.getUserUID(email);
+    const weatherInfoForMongo = {city: userCity.city ,uid, ...weatherResponse.weatherInfoForMongo}
+    console.log(weatherInfoForMongo);
+    await domain.setWeatherDataToMongo(weatherInfoForMongo);
+    return {api: weatherResponse.api, ...weatherResponse.weatherInfo};
   },
   updateUserInfo: async (email: string, city: string, api: string) => {
     const weatherResponse = await weatherService.getWeather(city, api);
@@ -52,8 +57,7 @@ export const userService = {
   },
   deleteCity: async (city:string, email: string) => {
     const uid = await domain.getUserUID(email);
-    const deleteStatus = await domain.deleteCity(uid, city);
-    console.log(defaultStatus);
-    return defaultStatus;
+    const deleteCount = await domain.deleteCity(uid, city);
+    return deleteCount;
   }
 };

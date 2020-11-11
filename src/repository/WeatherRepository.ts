@@ -66,7 +66,8 @@ export const weatherRepository = {
           .sort("created")
           .exec((error, foundCities) => {
             if (error) reject(error);
-            if(!foundCities.length) reject(new ErrorHandler(404, 'City not found in MongoDB'));
+            if (!foundCities.length)
+              reject(new ErrorHandler(404, "City not found in MongoDB"));
             resolve(foundCities);
           });
       });
@@ -77,19 +78,25 @@ export const weatherRepository = {
       throw error;
     }
   },
-  deleteCity: async (uid:string, city: string) => {
+  deleteCity: async (uid: string, city: string) => {
     try {
-      const deleteResult:boolean = await CityWeatherInfo.deleteMany({
-        $and: [{ userID: uid }, { name: city }],
-      }).then(() => {
-        return true;
-      }).catch(error => {
-        throw error;
-      });
+      const deleteResult: number | undefined = await CityWeatherInfo.deleteMany(
+        {
+          $and: [{ userID: uid }, { name: city }],
+        }
+      )
+        .then(({ deletedCount }) => {
+          if (deletedCount === 0) {
+            throw new ErrorHandler(404, "City with this name was not found in MongoDB");
+          } else return deletedCount;
+        })
+        .catch((error) => {
+          throw error;
+        });
+      console.log(deleteResult);
       return deleteResult;
     } catch (error) {
       throw error;
     }
-    
-  }
+  },
 };

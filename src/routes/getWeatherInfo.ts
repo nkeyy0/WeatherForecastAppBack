@@ -9,7 +9,7 @@ import { userController } from "../controllers/UserController";
 
 const router = Router();
 
-router.post(
+router.get(
   "/",
   getWeatherValidatorRules(),
   getWeatherValidator,

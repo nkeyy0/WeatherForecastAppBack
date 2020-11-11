@@ -1,11 +1,11 @@
 import { NextFunction, Request, Response } from "express";
-import { body, validationResult } from "express-validator";
+import { body, validationResult, query } from "express-validator";
 
 export const getWeatherValidatorRules = () => {
   return [
-    body("email").isEmail(),
-    body("city").isLength({min:1, max: 40}),
-    body('api').isLength({min:3, max: 40})
+    query("email").isEmail(),
+    query("city").isLength({min:1, max: 40}),
+    query('api').isLength({min:3, max: 40})
   ];
 };
 

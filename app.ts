@@ -1,5 +1,6 @@
 import admin, { ServiceAccount } from "firebase-admin";
 import bodyParser from "body-parser";
+// import  queryParser  from 'express-query-parser';
 import cors from "cors";
 import express, {
   Request,
@@ -31,6 +32,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(express.static("static"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+// app.use(queryParser({
+//   parseNull: true,
+//   parseBoolean: true
+// }))
 app.use(cors());
 
 const params: ServiceAccount = {

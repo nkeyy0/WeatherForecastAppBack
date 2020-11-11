@@ -6,7 +6,7 @@ import { userController } from "../controllers/UserController";
 
 const router = Router();
 
-router.post(
+router.get(
   "/",
   authMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
