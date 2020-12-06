@@ -51,5 +51,9 @@ export const domain = {
   deleteCity: async (uid:string, city: string) => {
     const deleteResult = await weatherRepository.deleteCity(uid, city);
     return deleteResult;
+  },
+  passwordReset : async (email:string) => {
+    const passwordResetResult = await firebaseUserRepository.resetPassword(email);
+    return passwordResetResult;
   }
 };

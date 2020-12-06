@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { userService } from "../services/UserService";
 import { IUser } from "../interfaces/interfaces";
 import { ErrorHandler } from "../helpers/error";
+import { weatherService } from "../services/WeatherService";
 
 export const userController = {
   createUser: async (req: Request, res: Response, next: NextFunction) => {
@@ -100,6 +101,18 @@ export const userController = {
       next(error);
     }
   },
+  getWeatherForFiveDays: async (req:Request, res: Response, next: NextFunction) => {
+    const city = req.query.city as string
+    const api = req.query.api as string;
+    try {
+      const weatherForFiveDays = await weatherService.getWeatherForFiveDays(api, city); 
+      res.status(200).json({
+        weatherForFiveDays
+      })
+    } catch (error) {
+      next(error)
+    }
+  },
   deleteUserCity: async (req: Request, res: Response, next: NextFunction) => {
     const city: string = req.body.city;
     const email: string = req.body.email;
@@ -113,4 +126,15 @@ export const userController = {
       next(error);
     }
   },
+  passwordReset : async (req:Request, res: Response, next: NextFunction) => {
+    const email: string = req.body.email;
+    try {
+      const result = await userService.passwordReset(email);
+      res.status(200).json({
+        message: 'Email has been sent you. Please check and verify'
+      })
+    } catch (error) {
+      next(error);
+    }    
+  }
 };

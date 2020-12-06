@@ -8,6 +8,7 @@ export default (req:Request, res:Response, next:NextFunction) => {
 
   if (!authHeader) {
     res.status(401).json({
+      code: 401,
       message: "Token not provided!",
     });
     return
@@ -19,6 +20,7 @@ export default (req:Request, res:Response, next:NextFunction) => {
     next();
   } catch (error) {
     res.status(401).json({
+      code: 401,
       message: "Invalid token!",
     });
   }

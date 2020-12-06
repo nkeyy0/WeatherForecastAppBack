@@ -59,5 +59,9 @@ export const userService = {
     const uid = await domain.getUserUID(email);
     const deleteCount = await domain.deleteCity(uid, city);
     return deleteCount;
+  },
+  passwordReset : async (email: string) => {
+    const passwordResetResult = await domain.passwordReset(email);
+    return passwordResetResult;
   }
 };

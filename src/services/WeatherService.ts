@@ -1,6 +1,8 @@
 import {
   getWeatherFromOpenWeather,
   getWeatherFromWeatherstack,
+  getWeatherForFiveDaysFromOpenWeather,
+  getWeatherForFiveDaysFromWeatherStack
 } from "../providers/WeatherProvider";
 import { OPEN_WEATHER_MAP_API, WEATHERSTACK_API } from "../constants/constants";
 import { ErrorHandler } from "../helpers/error";
@@ -35,4 +37,21 @@ export const weatherService = {
       throw new ErrorHandler(404, "API error: API not found!");
     }
   },
+  getWeatherForFiveDays: async(api: string, city: string) => {
+    if (api === OPEN_WEATHER_MAP_API) {
+      console.log('o');
+      const weatherInfo = await getWeatherForFiveDaysFromOpenWeather(city);
+      console.log(weatherInfo);
+      return { api, weatherInfo};
+    }
+    if(api === WEATHERSTACK_API){
+      console.log('w');
+      const weatherInfo = await getWeatherForFiveDaysFromWeatherStack(city);
+      console.log(weatherInfo);
+      return {api, weatherInfo};
+    }
+    else {
+      throw new ErrorHandler(404, "API error: API not found!");
+    }
+  }
 };

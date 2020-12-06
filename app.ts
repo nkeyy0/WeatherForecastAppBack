@@ -20,6 +20,8 @@ import createUserRouter from "./src/routes/createUser";
 import getCitiesRouter from "./src/routes/getCities";
 import getWeatherForOneCityRouter from "./src/routes/getWeatherForOneCity";
 import deleteUserCityRouter from './src/routes/deleteCity';
+import getWeatherForFiveDaysRouter from './src/routes/getWeatherForFiveDays';
+import passwordResetRoute from './src/routes/resetPassword';
 import { ErrorHandler } from "./src/helpers/error";
 import { handleError } from "./src/middleware/errorHandler";
 import corsMiddleware from "./src/middleware/cors";
@@ -56,7 +58,9 @@ app.use("/createUser", createUserRouter);
 app.use("/getWeatherInfo", getWeatherInfoRouter);
 app.use("/getCities", getCitiesRouter);
 app.use("/getWeatherForOnceCity", getWeatherForOneCityRouter);
+app.use('/getWeatherForFiveDays', getWeatherForFiveDaysRouter)
 app.use("/deleteUserCity", deleteUserCityRouter);
+app.use("/passwordReset", passwordResetRoute)
 
 app.use(
   (err: ErrorHandler, req: Request, res: Response, next: NextFunction) => {
